@@ -50,6 +50,19 @@ VIRTUAL_HEIGHT = 243
 -- paddle movement speed
 PADDLE_SPEED = 200
 
+GAME_MODES = {
+    PVP = 1,
+    PVE = 2,
+    EVE = 3
+}
+
+DIFFICULTIES = {
+    EASY = 1,
+    NORMAL = 2,
+    HARD = 3,
+    IMPOSSIBLE = 4
+}
+
 
 if not table.unpack then
     table.unpack = unpack  -- For Lua 5.1 compatibility
@@ -95,19 +108,27 @@ function love.load()
     })
 
     -- the state of our game; can be any of the following:
-    -- 1. 'menu' (where you can select game mode: pvp, pve, eve)
-    -- 2. 'start' (the beginning of the game, before first serve)
-    -- 3. 'serve' (waiting on a key press to serve the ball)
-    -- 4. 'play' (the ball is in play, bouncing between paddles)
-    -- 5. 'done' (the game is over, with a victor, ready for restart)
-    gameState = 'menu'
-    gameModes = {"pvp", "pve", "eve"}
-    gameMode = gameModes[1]
-    gameModesLength = tableLength(gameModes)
+    -- 1. 'modeMenu' (where you can select game mode: pvp, pve, eve)
+    -- 2. 'difficultyMenu' (where you can select how hard will the COM be)
+    -- 3. 'start' (the beginning of the game, before first serve)
+    -- 4. 'serve' (waiting on a key press to serve the ball)
+    -- 5. 'play' (the ball is in play, bouncing between paddles)
+    -- 6. 'done' (the game is over, with a victor, ready for restart)
+    gameState = 'modeMenu'
+    gameMode = GAME_MODES.PVP
+    gameModesLength = tableLength(GAME_MODES)
+    difficulty = DIFFICULTIES.EASY
+    difficultyLength = tableLength(DIFFICULTIES)
     gameModesConfigurations = {
         {'Player VS Player', 0, 44, VIRTUAL_WIDTH, 'center'},
         {'Player VS COM', 0, 105.5, VIRTUAL_WIDTH, 'center'},
         {'COM vs COM', 0, 167, VIRTUAL_WIDTH, 'center'}
+    }
+    difficultiesConfigurations = {
+        {'EASY', 0, 22, VIRTUAL_WIDTH, 'center'},
+        {'NORMAL', 0, 77.67, VIRTUAL_WIDTH, 'center'},
+        {'HARD', 0, 133.34, VIRTUAL_WIDTH, 'center'},
+        {'IMPOSSIBLE', 0, 189.01, VIRTUAL_WIDTH, 'center'}
     }
 end
 
@@ -121,12 +142,11 @@ function tableLength(t)
 end
 
 
-function renderMenu()
+function renderModeMenu()
     love.graphics.setFont(scoreFont)
     r, g, b, a = love.graphics.getColor()
-    currentGameModeIndex = getGameModeIndex()
     for i, params in ipairs(gameModesConfigurations) do
-        if i == currentGameModeIndex then
+        if i == gameMode then
             love.graphics.setColor(1, 1, 0, 1)
         else
             love.graphics.setColor(r, g, b, a)
@@ -136,11 +156,16 @@ function renderMenu()
 end
 
 
-function getGameModeIndex()
-    for i, mode in ipairs(gameModes) do
-        if mode == gameMode then
-            return i
+function renderDifficultyMenu()
+    love.graphics.setFont(scoreFont)
+    r, g, b, a = love.graphics.getColor()
+    for i, params in ipairs(difficultiesConfigurations) do
+        if i == difficulty then
+            love.graphics.setColor(1, 1, 0, 1)
+        else
+            love.graphics.setColor(r, g, b, a)
         end
+        love.graphics.printf(table.unpack(params))
     end
 end
 
@@ -148,7 +173,7 @@ end
 function startGame()
     -- initialize our player paddles; make them global so that they can be
     -- detected by other functions and modules
-    if gameMode == "pvp" then
+    if gameMode == GAME_MODES.PVP then
         player1Config = {
             ["isPlayable"] = true,
             ["keys"] = {["up"] = {"w"}, ["down"] = {"s"}}
@@ -157,7 +182,7 @@ function startGame()
             ["isPlayable"] = true,
             ["keys"] = {["up"] = {"up"}, ["down"] = {"down"}}
         }
-    elseif gameMode == "pve" then
+    elseif gameMode == GAME_MODES.PVE then
         player1Config = {
             ["isPlayable"] = true,
             ["keys"] = {["up"] = {"w", "up"}, ["down"] = {"s", "down"}}
@@ -243,9 +268,9 @@ function love.update(dt)
         -- on player who last scored
         ball.dy = math.random(-50, 50)
         if servingPlayer == 1 then
-            ball.dx = 1000
+            ball.dx = math.random(140, 200)
         else
-            ball.dx = -1000
+            ball.dx = -math.random(140, 200)
         end
     elseif gameState == 'play' then
         -- detect ball collision with paddles, reversing dx if true and
@@ -332,14 +357,14 @@ function love.update(dt)
         end
     end
         
-    if gameState ~= 'menu' then
+    if gameState ~= 'modeMenu' and gameState ~= 'difficultyMenu' then
         -- paddles can move no matter what state we're in
         --
         -- player 1
-        player1:handleMovement(gameState, ball)
+        player1:handleMovement(gameState, ball, difficulty)
 
         -- player 2
-        player2:handleMovement(gameState, ball)
+        player2:handleMovement(gameState, ball, difficulty)
 
         -- update our ball based on its DX and DY only if we're in play state;
         -- scale the velocity by dt so movement is framerate-independent
@@ -366,7 +391,13 @@ function love.keypressed(key)
     -- if we press enter during either the start or serve phase, it should
     -- transition to the next appropriate state
     elseif key == 'enter' or key == 'return' then
-        if gameState == 'menu' then
+        if gameState == 'modeMenu' then
+            if gameMode == GAME_MODES.PVP then
+                startGame()
+            else
+                gameState = 'difficultyMenu'
+            end
+        elseif gameState == 'difficultyMenu' then
             startGame()
         elseif gameState == 'start' then
             gameState = 'serve'
@@ -392,11 +423,17 @@ function love.keypressed(key)
         end
     end
 
-    if gameState == 'menu' then
+    if gameState == 'modeMenu' then
         if key == 's' or key == 'down' then
-            gameMode = gameModes[math.min(getGameModeIndex() + 1, gameModesLength)]
+            gameMode = math.min(gameMode + 1, gameModesLength)
         elseif key == 'w' or key == 'up' then
-            gameMode = gameModes[math.max(getGameModeIndex() - 1, 1)]
+            gameMode = math.max(gameMode - 1, 1)
+        end
+    elseif gameState == 'difficultyMenu' then
+        if key == 's' or key == 'down' then
+            difficulty = math.min(difficulty + 1, difficultyLength)
+        elseif key == 'w' or key == 'up' then
+            difficulty = math.max(difficulty - 1, 1)
         end
     end
 end
@@ -412,8 +449,10 @@ function love.draw()
     love.graphics.clear(40/255, 45/255, 52/255, 255/255)
 
     -- render different things depending on which part of the game we're in
-    if gameState == 'menu' then
-        renderMenu()
+    if gameState == 'difficultyMenu' then
+        renderDifficultyMenu()
+    elseif gameState == 'modeMenu' then
+        renderModeMenu()
     elseif gameState == 'start' then
         -- UI messages
         love.graphics.setFont(smallFont)
@@ -437,7 +476,7 @@ function love.draw()
     end
 
     -- show the score before ball is rendered so it can move over the text
-    if gameState ~= 'menu' then
+    if gameState ~= 'modeMenu' and gameState ~= 'difficultyMenu' then
         displayScore()
         player1:render()
         player2:render()
@@ -453,9 +492,9 @@ end
 
 
 function getPlayerString(player)
-    if gameMode == 'pve' and player == 2 then
+    if gameMode == GAME_MODES.PVE and player == 2 then
         return 'COM'
-    elseif gameMode == 'eve' then
+    elseif gameMode == GAME_MODES.EVE then
         return 'COM ' .. tostring(player)
     else
         return 'Player ' .. tostring(player)

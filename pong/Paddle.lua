@@ -11,6 +11,8 @@
     program to deflect the ball back toward the opponent.
 ]]
 
+PADDING = 10
+
 Paddle = Class{}
 
 --[[
@@ -69,11 +71,11 @@ end
     Function to handle movement depending on whether the Paddle is controlled
     by the player or automated.
 ]]
-function Paddle:handleMovement(gameState, ball)
+function Paddle:handleMovement(gameState, ball, difficulty)
     if self.isPlayable then
         self:handlePlayerMovement()
     else
-        self:handleNPCMovement(ball)
+        self:handleNPCMovement(gameState, ball, difficulty)
     end
 end
 
@@ -114,9 +116,41 @@ end
     Calculate whether the paddle should move up or down depending on its
     position relative to the ball.
 ]]
-function Paddle:handleNPCMovement(ball)
+function Paddle:handleNPCMovement(gameState, ball, difficulty)
     if gameState == "play" then
-        self.dy = ball.y > self.y and PADDLE_SPEED or -PADDLE_SPEED
+        errorChance = math.random(1000)
+        doNothingChance = math.random(1000)
+
+        if ball.y + ball.height > self.y + self.height then
+            correctVelocity = PADDLE_SPEED
+        elseif ball.y + ball.height < self.y then
+            correctVelocity = -PADDLE_SPEED
+        else
+            correctVelocity = 0
+        end
+
+        isBallTowardsSelf = (ball.dx < 0 and self.x == 0 + PADDING) or (ball.dx > 0 and self.x == VIRTUAL_WIDTH - PADDING)
+        if difficulty == DIFFICULTIES.EASY then
+            shouldMove = doNothingChance < 700 and isBallTowardsSelf
+            shouldError = errorChance < 200
+        elseif difficulty == DIFFICULTIES.NORMAL then
+            shouldMove = doNothingChance < 800 and isBallTowardsSelf
+            shouldError = errorChance < 100
+        elseif difficulty == DIFFICULTIES.HARD then
+            shouldMove = doNothingChance < 800
+            shouldError = errorChance < 100
+        elseif difficulty == DIFFICULTIES.IMPOSSIBLE then
+            shouldMove = true
+            shouldError = false
+        end
+
+        if not shouldMove then
+            self.dy = 0
+        elseif shouldError then
+            self.dy = -correctVelocity
+        else
+            self.dy = correctVelocity
+        end
     else
         self.dy = 0
     end

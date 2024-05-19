@@ -50,6 +50,12 @@ VIRTUAL_HEIGHT = 243
 -- paddle movement speed
 PADDLE_SPEED = 200
 
+
+if not table.unpack then
+    table.unpack = unpack  -- For Lua 5.1 compatibility
+end
+
+
 --[[
     Called just once at the beginning of the game; used to set up
     game objects, variables, etc. and prepare the game world.
@@ -88,9 +94,60 @@ function love.load()
         vsync = true
     })
 
+    -- the state of our game; can be any of the following:
+    -- 1. 'menu' (where you can select game mode: pvp, pve, eve)
+    -- 2. 'start' (the beginning of the game, before first serve)
+    -- 3. 'serve' (waiting on a key press to serve the ball)
+    -- 4. 'play' (the ball is in play, bouncing between paddles)
+    -- 5. 'done' (the game is over, with a victor, ready for restart)
+    gameState = 'menu'
+    gameModes = {"pvp", "pve", "eve"}
+    gameMode = gameModes[1]
+    gameModesLength = tableLength(gameModes)
+    gameModesConfigurations = {
+        {'Player VS Player', 0, 44, VIRTUAL_WIDTH, 'center'},
+        {'Player VS COM', 0, 105.5, VIRTUAL_WIDTH, 'center'},
+        {'COM vs COM', 0, 167, VIRTUAL_WIDTH, 'center'}
+    }
+end
+
+
+function tableLength(t)
+    count = 0
+    for _, v in pairs(t) do
+        count = count + 1
+    end
+    return count
+end
+
+
+function renderMenu()
+    love.graphics.setFont(scoreFont)
+    r, g, b, a = love.graphics.getColor()
+    currentGameModeIndex = getGameModeIndex()
+    for i, params in ipairs(gameModesConfigurations) do
+        if i == currentGameModeIndex then
+            love.graphics.setColor(1, 1, 0, 1)
+        else
+            love.graphics.setColor(r, g, b, a)
+        end
+        love.graphics.printf(table.unpack(params))
+    end
+end
+
+
+function getGameModeIndex()
+    for i, mode in ipairs(gameModes) do
+        if mode == gameMode then
+            return i
+        end
+    end
+end
+
+
+function startGame()
     -- initialize our player paddles; make them global so that they can be
     -- detected by other functions and modules
-    gameMode = "eve"
     if gameMode == "pvp" then
         player1Config = {
             ["isPlayable"] = true,
@@ -161,6 +218,7 @@ function love.load()
     gameState = 'start'
 end
 
+
 --[[
     Called whenever we change the dimensions of our window, as by dragging
     out its bottom corner, for example. In this case, we only need to worry
@@ -185,9 +243,9 @@ function love.update(dt)
         -- on player who last scored
         ball.dy = math.random(-50, 50)
         if servingPlayer == 1 then
-            ball.dx = math.random(140, 200)
+            ball.dx = 1000
         else
-            ball.dx = -math.random(140, 200)
+            ball.dx = -1000
         end
     elseif gameState == 'play' then
         -- detect ball collision with paddles, reversing dx if true and
@@ -273,24 +331,25 @@ function love.update(dt)
             end
         end
     end
+        
+    if gameState ~= 'menu' then
+        -- paddles can move no matter what state we're in
+        --
+        -- player 1
+        player1:handleMovement(gameState, ball)
 
-    --
-    -- paddles can move no matter what state we're in
-    --
-    -- player 1
-    player1:handleMovement(gameState, ball)
+        -- player 2
+        player2:handleMovement(gameState, ball)
 
-    -- player 2
-    player2:handleMovement(gameState, ball)
+        -- update our ball based on its DX and DY only if we're in play state;
+        -- scale the velocity by dt so movement is framerate-independent
+        if gameState == 'play' then
+            ball:update(dt)
+        end
 
-    -- update our ball based on its DX and DY only if we're in play state;
-    -- scale the velocity by dt so movement is framerate-independent
-    if gameState == 'play' then
-        ball:update(dt)
+        player1:update(dt)
+        player2:update(dt)
     end
-
-    player1:update(dt)
-    player2:update(dt)
 end
 
 --[[
@@ -307,7 +366,9 @@ function love.keypressed(key)
     -- if we press enter during either the start or serve phase, it should
     -- transition to the next appropriate state
     elseif key == 'enter' or key == 'return' then
-        if gameState == 'start' then
+        if gameState == 'menu' then
+            startGame()
+        elseif gameState == 'start' then
             gameState = 'serve'
         elseif gameState == 'serve' then
             gameState = 'play'
@@ -330,6 +391,14 @@ function love.keypressed(key)
             end
         end
     end
+
+    if gameState == 'menu' then
+        if key == 's' or key == 'down' then
+            gameMode = gameModes[math.min(getGameModeIndex() + 1, gameModesLength)]
+        elseif key == 'w' or key == 'up' then
+            gameMode = gameModes[math.max(getGameModeIndex() - 1, 1)]
+        end
+    end
 end
 
 --[[
@@ -341,9 +410,11 @@ function love.draw()
     push:apply('start')
 
     love.graphics.clear(40/255, 45/255, 52/255, 255/255)
-    
+
     -- render different things depending on which part of the game we're in
-    if gameState == 'start' then
+    if gameState == 'menu' then
+        renderMenu()
+    elseif gameState == 'start' then
         -- UI messages
         love.graphics.setFont(smallFont)
         love.graphics.printf('Welcome to Pong!', 0, 10, VIRTUAL_WIDTH, 'center')
@@ -351,7 +422,7 @@ function love.draw()
     elseif gameState == 'serve' then
         -- UI messages
         love.graphics.setFont(smallFont)
-        love.graphics.printf('Player ' .. tostring(servingPlayer) .. "'s serve!", 
+        love.graphics.printf(getPlayerString(servingPlayer) .. "'s serve!", 
             0, 10, VIRTUAL_WIDTH, 'center')
         love.graphics.printf('Press Enter to serve!', 0, 20, VIRTUAL_WIDTH, 'center')
     elseif gameState == 'play' then
@@ -359,18 +430,19 @@ function love.draw()
     elseif gameState == 'done' then
         -- UI messages
         love.graphics.setFont(largeFont)
-        love.graphics.printf('Player ' .. tostring(winningPlayer) .. ' wins!',
+        love.graphics.printf(getPlayerString(winningPlayer) .. ' wins!',
             0, 10, VIRTUAL_WIDTH, 'center')
         love.graphics.setFont(smallFont)
         love.graphics.printf('Press Enter to restart!', 0, 30, VIRTUAL_WIDTH, 'center')
     end
 
     -- show the score before ball is rendered so it can move over the text
-    displayScore()
-    
-    player1:render()
-    player2:render()
-    ball:render()
+    if gameState ~= 'menu' then
+        displayScore()
+        player1:render()
+        player2:render()
+        ball:render()
+    end
 
     -- display FPS for debugging; simply comment out to remove
     displayFPS()
@@ -378,6 +450,18 @@ function love.draw()
     -- end our drawing to push
     push:apply('end')
 end
+
+
+function getPlayerString(player)
+    if gameMode == 'pve' and player == 2 then
+        return 'COM'
+    elseif gameMode == 'eve' then
+        return 'COM ' .. tostring(player)
+    else
+        return 'Player ' .. tostring(player)
+    end
+end
+
 
 --[[
     Simple function for rendering the scores.

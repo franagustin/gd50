@@ -72,7 +72,7 @@ end
 function Paddle:handleMovement(gameState, ball)
     if self.isPlayable then
         self:handlePlayerMovement()
-    elseif gameState == "play" then
+    else
         self:handleNPCMovement(ball)
     end
 end
@@ -115,5 +115,9 @@ end
     position relative to the ball.
 ]]
 function Paddle:handleNPCMovement(ball)
-    self.dy = ball.y > self.y and PADDLE_SPEED or -PADDLE_SPEED
+    if gameState == "play" then
+        self.dy = ball.y > self.y and PADDLE_SPEED or -PADDLE_SPEED
+    else
+        self.dy = 0
+    end
 end

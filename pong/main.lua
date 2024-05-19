@@ -90,19 +90,53 @@ function love.load()
 
     -- initialize our player paddles; make them global so that they can be
     -- detected by other functions and modules
-    gameMode = "pve"
+    gameMode = "eve"
     if gameMode == "pvp" then
-        isPlayer1Playable = true
-        isPlayer2Playable = true
+        player1Config = {
+            ["isPlayable"] = true,
+            ["keys"] = {["up"] = {"w"}, ["down"] = {"s"}}
+        }
+        player2Config = {
+            ["isPlayable"] = true,
+            ["keys"] = {["up"] = {"up"}, ["down"] = {"down"}}
+        }
     elseif gameMode == "pve" then
-        isPlayer1Playable = true
-        isPlayer2Playable = false
+        player1Config = {
+            ["isPlayable"] = true,
+            ["keys"] = {["up"] = {"w", "up"}, ["down"] = {"s", "down"}}
+        }
+        player2Config = {
+            ["isPlayable"] = false,
+            ["keys"] = {}
+        }
     else
-        isPlayer1Playable = false
-        isPlayer2Playable = false
+        player1Config = {
+            ["isPlayable"] = false,
+            ["keys"] = {}
+        }
+        player2Config = {
+            ["isPlayable"] = false,
+            ["keys"] = {}
+        }
     end
-    player1 = Paddle(10, 30, 5, 20, {"w", "up"}, {"s", "down"}, isPlayer1Playable)
-    player2 = Paddle(VIRTUAL_WIDTH - 10, VIRTUAL_HEIGHT - 30, 5, 20, {"up"}, {"down"}, isPlayer2Playable)
+    player1 = Paddle(
+        10,
+        30,
+        5,
+        20,
+        player1Config["keys"]["up"],
+        player1Config["keys"]["down"],
+        player1Config["isPlayable"]
+    )
+    player2 = Paddle(
+        VIRTUAL_WIDTH - 10,
+        VIRTUAL_HEIGHT - 30,
+        5,
+        20,
+        player2Config["keys"]["up"],
+        player2Config["keys"]["down"],
+        player2Config["isPlayable"]
+    )
 
     -- place a ball in the middle of the screen
     ball = Ball(VIRTUAL_WIDTH / 2 - 2, VIRTUAL_HEIGHT / 2 - 2, 4, 4)
@@ -244,10 +278,10 @@ function love.update(dt)
     -- paddles can move no matter what state we're in
     --
     -- player 1
-    player1:handleMovement(ball)
+    player1:handleMovement(gameState, ball)
 
     -- player 2
-    player2:handleMovement(ball)
+    player2:handleMovement(gameState, ball)
 
     -- update our ball based on its DX and DY only if we're in play state;
     -- scale the velocity by dt so movement is framerate-independent

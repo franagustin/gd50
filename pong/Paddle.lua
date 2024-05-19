@@ -66,17 +66,22 @@ end
 
 
 --[[
-    Function to handle movement as needed
+    Function to handle movement depending on whether the Paddle is controlled
+    by the player or automated.
 ]]
-function Paddle:handleMovement(ball)
+function Paddle:handleMovement(gameState, ball)
     if self.isPlayable then
         self:handlePlayerMovement()
-    else
+    elseif gameState == "play" then
         self:handleNPCMovement(ball)
     end
 end
 
 
+--[[
+    Check if any of the up/down buttons for this paddle has been triggered
+    and move the paddle upwards or downwards accordingly.
+]]
 function Paddle:handlePlayerMovement()
     isMovingUp = false
     for i, upButton in pairs(self.upButtons) do
@@ -105,6 +110,10 @@ function Paddle:handlePlayerMovement()
 end
 
 
+--[[
+    Calculate whether the paddle should move up or down depending on its
+    position relative to the ball.
+]]
 function Paddle:handleNPCMovement(ball)
     self.dy = ball.y > self.y and PADDLE_SPEED or -PADDLE_SPEED
 end

@@ -20,6 +20,7 @@ BIRD_HEIGHT = 24
 local MIN_SECONDS_BETWEEN_PIPES = 1.5
 local MAX_SECONDS_BETWEEN_PIPES = 3
 
+
 function PlayState:init()
     self.bird = Bird()
     self.pipePairs = {}
@@ -30,11 +31,21 @@ function PlayState:init()
     self.lastY = -PIPE_HEIGHT + math.random(80) + 20
     -- initialize the number of seconds until the next set of pipes appear
     self.secondsUntilNextPipes = math.random(MIN_SECONDS_BETWEEN_PIPES, MAX_SECONDS_BETWEEN_PIPES)
+    self.paused = false
 end
 
 function PlayState:update(dt)
     -- update timer for pipe spawning
     self.timer = self.timer + dt
+
+    if love.keyboard.keysPressed["p"] then
+        self.paused = not self.paused
+        gIsWorldScrolling = not gIsWorldScrolling
+    end
+
+    if self.paused then
+        return
+    end
 
     -- spawn a new pipe pair every second and a half
     -- if self.timer > 2 then

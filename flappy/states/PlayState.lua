@@ -20,6 +20,9 @@ BIRD_HEIGHT = 24
 local MIN_SECONDS_BETWEEN_PIPES = 1.5
 local MAX_SECONDS_BETWEEN_PIPES = 3
 
+local pauseIcon = love.graphics.newImage('pause.png')
+local playIcon = love.graphics.newImage('play-small.png')
+
 
 function PlayState:init()
     self.bird = Bird()
@@ -38,13 +41,13 @@ function PlayState:update(dt)
     -- update timer for pipe spawning
     self.timer = self.timer + dt
 
-    if love.keyboard.keysPressed["p"] then
+    if love.keyboard.keysPressed['p'] then
         self.paused = not self.paused
         gIsWorldScrolling = not gIsWorldScrolling
         if self.paused then
-            sounds["music"]:pause()
+            sounds['music']:pause()
         else
-            sounds["music"]:play()
+            sounds['music']:play()
         end
     end
 
@@ -134,6 +137,17 @@ function PlayState:render()
     love.graphics.print('Score: ' .. tostring(self.score), 8, 8)
 
     self.bird:render()
+
+    if self.paused then
+        r, g, b, a = love.graphics.getColor()
+        love.graphics.setColor(0, 0, 0, 0.6)
+        love.graphics.rectangle('fill', 0, 0, VIRTUAL_WIDTH, VIRTUAL_HEIGHT)
+        love.graphics.setColor(r, g, b, a)
+        love.graphics.draw(pauseIcon, (VIRTUAL_WIDTH - pauseIcon:getWidth()) / 2, (VIRTUAL_HEIGHT - pauseIcon:getWidth()) / 2)
+        love.graphics.draw(playIcon, VIRTUAL_WIDTH - playIcon:getWidth() - 22, 8)
+        love.graphics.setFont(mediumFont)
+        love.graphics.printf("P", -10, 10, VIRTUAL_WIDTH, 'right')
+    end
 end
 
 --[[

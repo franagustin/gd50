@@ -41,6 +41,11 @@ function PlayState:update(dt)
     if love.keyboard.keysPressed["p"] then
         self.paused = not self.paused
         gIsWorldScrolling = not gIsWorldScrolling
+        if self.paused then
+            sounds["music"]:pause()
+        else
+            sounds["music"]:play()
+        end
     end
 
     if self.paused then

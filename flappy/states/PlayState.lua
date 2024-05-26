@@ -21,6 +21,7 @@ local MIN_SECONDS_BETWEEN_PIPES = 1.5
 local MAX_SECONDS_BETWEEN_PIPES = 3
 
 local pauseIcon = love.graphics.newImage('pause.png')
+local pauseIconSmall = love.graphics.newImage('pause-small.png')
 local playIcon = love.graphics.newImage('play-small.png')
 
 
@@ -145,6 +146,10 @@ function PlayState:render()
         love.graphics.setColor(r, g, b, a)
         love.graphics.draw(pauseIcon, (VIRTUAL_WIDTH - pauseIcon:getWidth()) / 2, (VIRTUAL_HEIGHT - pauseIcon:getWidth()) / 2)
         love.graphics.draw(playIcon, VIRTUAL_WIDTH - playIcon:getWidth() - 22, 8)
+        love.graphics.setFont(mediumFont)
+        love.graphics.printf("P", -10, 10, VIRTUAL_WIDTH, 'right')
+    else
+        love.graphics.draw(pauseIconSmall, VIRTUAL_WIDTH - pauseIconSmall:getWidth() - 22, 8)
         love.graphics.setFont(mediumFont)
         love.graphics.printf("P", -10, 10, VIRTUAL_WIDTH, 'right')
     end

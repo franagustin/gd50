@@ -23,6 +23,7 @@ local MAX_SECONDS_BETWEEN_PIPES = 3
 local pauseIcon = love.graphics.newImage('pause.png')
 local pauseIconSmall = love.graphics.newImage('pause-small.png')
 local playIcon = love.graphics.newImage('play-small.png')
+local pauseSound = love.audio.newSource('pause.wav', 'static')
 
 
 function PlayState:init()
@@ -47,7 +48,9 @@ function PlayState:update(dt)
         gIsWorldScrolling = not gIsWorldScrolling
         if self.paused then
             sounds['music']:pause()
+            pauseSound:play()
         else
+            pauseSound:play()
             sounds['music']:play()
         end
     end
